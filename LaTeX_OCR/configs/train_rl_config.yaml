@@ -6,7 +6,7 @@ data:
   image_base_dir: "data/formula_images_processed/formula_images_processed"                 # 图像文件所在的基目录 (如果 JSON 中是相对路径)
   max_seq_len: 256                                  # OCR 解码器最大序列长度
   num_workers: 20                                    # Dataloader 工作进程数 (Windows CPU 设为 0)
-  # 图像预处理参数 (根据你的 ViT 或 CNN 输入要求调整)
+  # 图像预处理参数 
   image_height: 224
   image_width: 224
   image_mean: [0.485, 0.456, 0.406]                 # ImageNet 默认值
@@ -60,10 +60,6 @@ training:
 rl:
   lambda_rl: 0                                    # RL 损失的权重 (关键超参数，需要仔细调整)
   # baseline: 'mean'                              # 基线策略 (目前简单使用批次平均奖励)
-  reward_components: [ 'exact_match'] # 包含要使用的奖励类型: 'cosine', 'exact_match'
-                                            # 例如: ['exact_match'] 只用 EM bonus
-                                            # 例如: ['cosine'] 只用 cosine similarity
-                                            # 例如: [] (或不设置) 则 RL block 不计算任何奖励 (但仍会采样如果 lambda_rl > 0)
   exact_match_bonus: 3.0
 
 # --- 评估配置 (用于验证集) ---
