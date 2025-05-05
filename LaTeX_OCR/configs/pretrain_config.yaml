@@ -1,0 +1,43 @@
+# --- 数据相关配置 ---
+data:
+  formula_file: "null"
+  train_split_file: "../data/train.json"
+  vocab_file: "../data/vocab.json"                # 词汇表文件路径
+  data_fraction: 1.0                               # 使用数据比例 (1.0 为全部)
+  max_seq_len: 256                                 # 最大序列长度
+  num_workers: 16                                   # Dataloader 工作进程数
+
+# --- 模型架构配置 (FeatureExtractorMTL) ---
+model:
+  d_model: 768               # 模型/嵌入维度
+  nhead: 12                  # 注意力头数
+  num_encoder_layers: 12     # Transformer Encoder 层数
+  dim_feedforward: 3072      # 前馈网络维度
+  dropout: 0.1               # Dropout 概率
+  max_bracket_depth: 10      # 结构任务：最大括号深度
+  # vocab_size 和 pad_token_id 会在脚本中从 vocab_file 动态获取
+
+# --- 训练配置 ---
+training:
+  output_dir: "../checkpoints/feature_extractor" # 检查点保存目录
+  log_file: "../logs/pretrain_extractor.log"     # 日志文件路径
+  epochs: 64                 # 训练轮数 (可能需要更多)
+  batch_size: 200             # 批次大小 (根据显存调整)
+  lr: 5e-5                   # 学习率
+  weight_decay: 0.01         # AdamW 权重衰减
+  warmup_steps: 1000         # 学习率预热步数
+  use_amp: True              # 是否使用混合精度训练
+  seed: 42                   # 随机种子
+  gradient_accumulation_steps: 2 # 梯度累积步数 (如果 batch_size 受限)
+  max_grad_norm: 1.0         # 梯度裁剪阈值 (可选, null 表示不裁剪)
+
+# --- 多任务损失权重 ---
+loss_weights:
+  mlm: 1.0                   # MLM 损失权重
+  structure: 0.5             # 结构预测损失权重 (需要调整)
+
+# --- 调度器配置 (示例: Cosine Annealing) ---
+scheduler:
+  type: "CosineAnnealingLR"
+  T_max_factor: 1.0          # T_max = (total_steps - warmup_steps) * T_max_factor
+  eta_min: 1e-7              # 最小学习率

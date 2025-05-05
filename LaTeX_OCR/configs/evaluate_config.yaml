@@ -1,0 +1,38 @@
+# --- Evaluation Configuration ---
+
+# --- Data Configuration ---
+data:
+  test_split_file: "data/test.json"                 # Test set JSON file path
+  vocab_file: "data/vocab.json"                     # Vocabulary file path
+  image_base_dir: "data/formula_images_processed/formula_images_processed" # Base directory for images
+  max_seq_len: 256                                  # Max sequence length (should match training)
+  num_workers: 4                                    # Dataloader workers (set to 0 for CPU/Windows debugging)
+  # Image preprocessing (should match validation transform during training)
+  image_height: 224
+  image_width: 224
+  image_mean: [0.485, 0.456, 0.406]
+  image_std: [0.229, 0.224, 0.225]
+
+# --- Model Configuration ---
+model:
+  # Path to the best trained OCR model checkpoint
+  checkpoint_path: "checkpoints/ocr_rl/model_best.pth.tar" # <--- IMPORTANT: Point to your best model
+  # OCR Model architecture parameters (must match the trained model)
+  vit_model_name: 'vit_base_patch16_224.augreg_in21k' # Use the non-deprecated name
+  vit_pretrained: False                             # Pretrained weights are loaded from checkpoint, set False here
+  d_model: 768
+  decoder_nhead: 12
+  decoder_layers: 6
+  decoder_dim_feedforward: 3072
+  decoder_dropout: 0.1                              # Dropout is disabled in eval mode, but keep for init
+
+# --- Evaluation Specific Configuration ---
+evaluation:
+  eval_batch_size: 64                             # Batch size for evaluation
+  generation_method: 'beam'                       # 'greedy' or 'beam' (Recommend 'beam' for best results)
+  beam_width: 5                                   # Beam width if using 'beam'
+  length_penalty: 0.7                             # Length penalty if using 'beam'
+
+# --- Optional ---
+training: # Keep seed consistent if desired, though less critical for eval
+  seed: 42

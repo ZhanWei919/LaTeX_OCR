@@ -1,0 +1,80 @@
+# --- 数据相关配置 ---
+data:
+  train_split_file: "data/train.json"   # 训练集 JSON 文件路径
+  val_split_file: "data/validate.json"   # 验证集 JSON 文件路径
+  vocab_file: "data/vocab.json"                 # 词汇表文件路径
+  image_base_dir: "data/formula_images_processed/formula_images_processed"                 # 图像文件所在的基目录 (如果 JSON 中是相对路径)
+  max_seq_len: 256                                  # OCR 解码器最大序列长度
+  num_workers: 20                                    # Dataloader 工作进程数 (Windows CPU 设为 0)
+  # 图像预处理参数 (根据你的 ViT 或 CNN 输入要求调整)
+  image_height: 224
+  image_width: 224
+  image_mean: [0.485, 0.456, 0.406]                 # ImageNet 默认值
+  image_std: [0.229, 0.224, 0.225]                  # ImageNet 默认值
+
+# --- 主 OCR 模型架构配置 (OCRModel) ---
+model:
+  vit_model_name: 'vit_base_patch16_224.augreg_in21k'       # ViT 模型名称 (来自 timm)
+  vit_pretrained: True                              # 是否加载 ViT 预训练权重
+  d_model: 768                                      # 模型/嵌入维度 (应与 ViT 输出和 FeatureExtractor 匹配)
+  decoder_nhead: 12                                 # 解码器注意力头数
+  decoder_layers: 6                                 # 解码器层数
+  decoder_dim_feedforward: 3072                     # 解码器前馈网络维度
+  decoder_dropout: 0.1                              # 解码器 Dropout 概率
+  # vocab_size, pad/sos/eos_token_id 会在脚本中动态获取
+  # 可选：加载 OCR 模型的初始权重 (例如，来自纯监督训练的检查点)
+  ocr_checkpoint_path: null                         # e.g., "../checkpoints/ocr_supervised/best_model.pth.tar"
+
+# --- 预训练特征提取器配置  ------------！！！！！！！！不能修改！！！！！！！！！！！！--------------
+feature_extractor:
+  # !! 关键：指向你预训练好的 FeatureExtractor 检查点 !!
+  checkpoint_path:  "checkpoints/feature_extractor/epoch_64.pt" # 修改为你实际的检查点路径
+  # 以下参数必须与 pretrain_config.yaml 中的设置完全一致，以确保模型结构匹配
+  d_model: 768
+  nhead: 12
+  num_encoder_layers: 12
+  dim_feedforward: 3072
+  dropout: 0.1
+  max_seq_len: 256             # Feature Extractor 处理序列的最大长度 (与预训练时一致)
+  max_bracket_depth: 10        # (加载模型时不需要，但保留以供参考)
+  pooling_strategy: 'mean'     # 特征池化策略 ('mean', 'cls', 'max')
+
+# --- 训练配置 ---
+training:
+  output_dir: "checkpoints/ocr_rl"             # 检查点保存目录
+  log_file: "logs/train_rl.log"                # 日志文件路径
+  epochs: 512                                      # 训练轮数
+  batch_size: 120                                 # 批次大小 (根据显存调整)
+  lr: 1e-6                                        # 学习率 (RL 训练通常需要较小的学习率)
+  weight_decay: 0.01                              # AdamW 权重衰减
+  warmup_steps: 500                               # 学习率预热步数
+  use_amp: True                                   # 是否使用混合精度训练
+  seed: 42                                        # 随机种子
+  gradient_accumulation_steps: 128                  # 梯度累积步数 (如果 batch_size 受限)
+  max_grad_norm: 1.0                              # 梯度裁剪阈值 (可选, null 表示不裁剪)
+  validation_interval: 1                          # 每隔多少个 epoch 验证一次
+  resume_checkpoint_path: "checkpoints/ocr_rl/model_best.pth.tar" # 指定要恢复的检查点路径 (相对路径或绝对路径)
+  save_every_n_epochs: 32
+
+# --- 强化学习特定配置 ---
+rl:
+  lambda_rl: 0                                    # RL 损失的权重 (关键超参数，需要仔细调整)
+  # baseline: 'mean'                              # 基线策略 (目前简单使用批次平均奖励)
+  reward_components: [ 'exact_match'] # 包含要使用的奖励类型: 'cosine', 'exact_match'
+                                            # 例如: ['exact_match'] 只用 EM bonus
+                                            # 例如: ['cosine'] 只用 cosine similarity
+                                            # 例如: [] (或不设置) 则 RL block 不计算任何奖励 (但仍会采样如果 lambda_rl > 0)
+  exact_match_bonus: 3.0
+
+# --- 评估配置 (用于验证集) ---
+evaluation:
+  eval_batch_size: 100                             # 验证时的批次大小
+  generation_method: 'greedy'                     # 生成方法 ('greedy' 或 'beam')
+  beam_width: 5                                   # Beam Search 宽度 (如果使用 'beam')
+  length_penalty: 0.7                             # Beam Search 长度惩罚因子
+
+# --- 调度器配置 (可选) ---
+scheduler:
+  type: "CosineAnnealingLR"                       # 同 pretrain
+  T_max_factor: 1.0
+  eta_min: 1e-7
